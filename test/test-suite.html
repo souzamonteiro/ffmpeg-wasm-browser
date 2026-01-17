@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFmpeg WebAssembly Test Suite</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 8px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        .download-link { display: block; margin: 10px 0; padding: 8px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; }
+        .upload-area { border: 2px dashed #007bff; padding: 20px; text-align: center; margin: 10px 0; border-radius: 8px; }
+        .file-info { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+        progress { width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🎬 FFmpeg WebAssembly Test Suite</h1>
+    <div id="status">Loading FFmpeg...</div>
+
+    <!-- File Upload Section -->
+    <div id="upload-section" style="display: none;">
+        <div class="test-section">
+            <h3>📁 Upload de Arquivos para Teste</h3>
+            <div class="upload-area" id="upload-area">
+                <p>Arraste arquivos de áudio aqui ou clique para selecionar</p>
+                <input type="file" id="file-input" accept=".mp3,.wav,.aac,.flac,.ogg" multiple style="display: none;">
+                <button onclick="document.getElementById('file-input').click()">Selecionar Arquivos</button>
+            </div>
+            <div id="file-list"></div>
+        </div>
+    </div>
+
+    <!-- Test Sections -->
+    <div id="tests-container"></div>
+
+    <script src="ffmpeg.js"></script>
+    <script>
+        // FFmpeg instance and state
+        let ffmpeg = null;
+        let isFFmpegLoaded = false;
+        let uploadedFiles = new Map();
+
+        // Test results tracking
+        const testResults = {};
+
+        // Initialize FFmpeg
+        async function initFFmpeg() {
+            if (!ffmpeg) {
+                document.getElementById('status').textContent = '🔄 Loading FFmpeg WebAssembly...';
+                try {
+                    ffmpeg = await createFFmpeg();
+                    isFFmpegLoaded = true;
+                    document.getElementById('status').textContent = '✅ FFmpeg loaded successfully!';
+                    document.getElementById('upload-section').style.display = 'block';
+                    renderTestSuite();
+                    setupFileUpload();
+                } catch (error) {
+                    document.getElementById('status').textContent = `❌ Failed to load FFmpeg: ${error.message}`;
+                }
+            }
+            return isFFmpegLoaded;
+        }
+
+        // Setup file upload functionality
+        function setupFileUpload() {
+            const fileInput = document.getElementById('file-input');
+            const uploadArea = document.getElementById('upload-area');
+            
+            // Click handler
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            // Drag and drop handlers
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.background = '#f0f8ff';
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.background = '';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.background = '';
+                handleFiles(e.dataTransfer.files);
+            });
+            
+            // File input change handler
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+        }
+
+        // Handle uploaded files
+        function handleFiles(files) {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            
+            for (let file of files) {
+                if (file.type.startsWith('audio/') || 
+                    file.name.endsWith('.mp3') || 
+                    file.name.endsWith('.wav') ||
+                    file.name.endsWith('.aac') ||
+                    file.name.endsWith('.flac') ||
+                    file.name.endsWith('.ogg')) {
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const fileData = new Uint8Array(e.target.result);
+                        uploadedFiles.set(file.name, fileData);
+                        
+                        const fileInfo = document.createElement('div');
+                        fileInfo.className = 'file-info';
+                        fileInfo.innerHTML = `
+                            <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB)
+                            <button onclick="loadFileToFFmpeg('${file.name}')">Carregar no FFmpeg</button>
+                        `;
+                        fileList.appendChild(fileInfo);
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            }
+        }
+
+        // Load file to FFmpeg filesystem
+        function loadFileToFFmpeg(filename) {
+            if (!uploadedFiles.has(filename)) {
+                alert('Arquivo não encontrado!');
+                return;
+            }
+            
+            try {
+                const fileData = uploadedFiles.get(filename);
+                ffmpeg.FS.writeFile(filename, fileData);
+                alert(`✅ Arquivo "${filename}" carregado no FFmpeg!`);
+            } catch (error) {
+                alert(`❌ Erro ao carregar arquivo: ${error.message}`);
+            }
+        }
+
+        // Test 1: Basic FFmpeg Information
+        async function testBasicInfo() {
+            if (!await initFFmpeg()) return '';
+            
+            const output = [];
+            const originalLog = console.log;
+            console.log = function(...args) { output.push(args.join(' ')); };
+            
+            try {
+                ffmpeg.callMain(["-version"]);
+                testResults.basicInfo = { success: true, output: output.join('\n') };
+                return `<div class="success">✅ FFmpeg version info retrieved</div><pre>${output.join('\n')}</pre>`;
+            } catch (error) {
+                testResults.basicInfo = { success: false, error: error.message };
+                return `<div class="error">❌ Failed: ${error.message}</div>`;
+            } finally {
+                console.log = originalLog;
+            }
+        }
+
+        // Test 2: List Available Codecs
+        async function testCodecList() {
+            if (!await initFFmpeg()) return '';
+            
+            const output = [];
+            const originalLog = console.log;
+            console.log = function(...args) { output.push(args.join(' ')); };
+            
+            try {
+                ffmpeg.callMain(["-codecs"]);
+                const codecOutput = output.join('\n');
+                
+                testResults.codecs = { success: true };
+                return `
+                    <div class="success">✅ Codec list retrieved</div>
+                    <pre>${codecOutput.substring(0, 2000)}...</pre>
+                `;
+            } catch (error) {
+                testResults.codecs = { success: false, error: error.message };
+                return `<div class="error">❌ Failed: ${error.message}</div>`;
+            } finally {
+                console.log = originalLog;
+            }
+        }
+
+        // Test 3: File Information Extraction
+        async function testFileInfo() {
+            if (!await initFFmpeg()) return '';
+            
+            try {
+                if (uploadedFiles.size === 0) {
+                    return `<div class="info">ℹ️ Faça upload de arquivos primeiro</div>`;
+                }
+                
+                let results = '';
+                for (let [filename] of uploadedFiles) {
+                    if (!fileExistsInFFmpeg(filename)) continue;
+                    
+                    const output = [];
+                    const originalLog = console.log;
+                    console.log = function(...args) { output.push(args.join(' ')); };
+                    
+                    try {
+                        ffmpeg.callMain(["-i", filename]);
+                        results += `<div class="success">✅ ${filename} analisado</div><pre>${output.join('\n')}</pre>`;
+                    } catch (e) {
+                        results += `<div class="info">ℹ️ ${filename}: ${output.join(' ').substring(0, 200)}</div>`;
+                    } finally {
+                        console.log = originalLog;
+                    }
+                }
+                
+                testResults.fileInfo = { success: true };
+                return `<div class="success">✅ Análise de arquivos completada</div>${results}`;
+            } catch (error) {
+                testResults.fileInfo = { success: false, error: error.message };
+                return `<div class="error">❌ Análise falhou: ${error.message}</div>`;
+            }
+        }
+
+        // Test 4: WAV to MP4 Conversion
+        async function testWAVtoMP4() {
+            if (!await initFFmpeg()) return '';
+            
+            try {
+                const wavFile = findFileByExtension('.wav');
+                if (!wavFile) {
+                    return `<div class="info">ℹ️ Faça upload de um arquivo WAV primeiro</div>`;
+                }
+                
+                const outputName = "converted.mp4";
+                
+                // Comando simplificado e corrigido
+                ffmpeg.callMain([
+                    "-i", wavFile,
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    outputName
+                ]);
+                
+                const outputData = ffmpeg.FS.readFile(outputName);
+                const blob = new Blob([outputData.buffer], { type: "video/mp4" });
+                const url = URL.createObjectURL(blob);
+                
+                testResults.wavToMp4 = { success: true, size: outputData.length };
+                return `
+                    <div class="success">✅ Conversão WAV → MP4 bem-sucedida!</div>
+                    <div>Arquivo de entrada: ${wavFile}</div>
+                    <div>Arquivo de saída: ${(outputData.length/1024).toFixed(1)} KB</div>
+                    <a href="${url}" class="download-link" download="${outputName}">⬇️ Download MP4</a>
+                `;
+            } catch (error) {
+                testResults.wavToMp4 = { success: false, error: error.message };
+                return `<div class="error">❌ Conversão falhou: ${error.message}</div>`;
+            }
+        }
+
+        // Test 5: Audio Filter (Volume adjustment)
+        async function testVolumeFilter() {
+            if (!await initFFmpeg()) return '';
+            
+            try {
+                const audioFile = findAnyAudioFile();
+                if (!audioFile) {
+                    return `<div class="info">ℹ️ Faça upload de um arquivo de áudio primeiro</div>`;
+                }
+                
+                const outputName = "volume_adjusted.wav";
+                
+                ffmpeg.callMain([
+                    "-i", audioFile,
+                    "-af", "volume=0.7",
+                    outputName
+                ]);
+                
+                const outputData = ffmpeg.FS.readFile(outputName);
+                const blob = new Blob([outputData.buffer], { type: "audio/wav" });
+                const url = URL.createObjectURL(blob);
+                
+                testResults.volumeFilter = { success: true };
+                return `
+                    <div class="success">✅ Filtro de volume aplicado (70%)</div>
+                    <div>Arquivo de entrada: ${audioFile}</div>
+                    <div>Arquivo de saída: ${(outputData.length/1024).toFixed(1)} KB</div>
+                    <a href="${url}" class="download-link" download="${outputName}">⬇️ Download Áudio com Volume Ajustado</a>
+                `;
+            } catch (error) {
+                testResults.volumeFilter = { success: false, error: error.message };
+                return `<div class="error">❌ Filtro de volume falhou: ${error.message}</div>`;
+            }
+        }
+
+        // Test 6: Audio Resampling
+        async function testResample() {
+            if (!await initFFmpeg()) return '';
+            
+            try {
+                const audioFile = findAnyAudioFile();
+                if (!audioFile) {
+                    return `<div class="info">ℹ️ Please upload an audio file first</div>`;
+                }
+                
+                const outputName = "resampled.wav";
+                
+                // This command is working - don't change it
+                ffmpeg.callMain([
+                    "-i", audioFile,
+                    "-acodec", "pcm_s16le", 
+                    "-ar", "22050",
+                    "-ac", "1",
+                    "-f", "wav",
+                    "-y",
+                    outputName
+                ]);
+                
+                // Wait longer for processing to complete (15-second file needs time)
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Check if file was created successfully
+                try {
+                    const outputData = ffmpeg.FS.readFile(outputName);
+                    const blob = new Blob([outputData.buffer], { type: "audio/wav" });
+                    const url = URL.createObjectURL(blob);
+                    
+                    testResults.resample = { success: true };
+                    return `
+                        <div class="success">✅ Audio resampling successful!</div>
+                        <div>Input file: ${audioFile}</div>
+                        <div>Output: 22050 Hz, Mono</div>
+                        <div>Size: ${(outputData.length/1024).toFixed(1)} KB</div>
+                        <a href="${url}" class="download-link" download="${outputName}">⬇️ Download Resampled Audio</a>
+                    `;
+                } catch (e) {
+                    // File might still be processing, wait a bit more
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    try {
+                        const outputData = ffmpeg.FS.readFile(outputName);
+                        const blob = new Blob([outputData.buffer], { type: "audio/wav" });
+                        const url = URL.createObjectURL(blob);
+                        
+                        testResults.resample = { success: true };
+                        return `
+                            <div class="success">✅ Audio resampling successful! (after additional wait)</div>
+                            <div>Input file: ${audioFile}</div>
+                            <div>Output: 22050 Hz, Mono</div>
+                            <div>Size: ${(outputData.length/1024).toFixed(1)} KB</div>
+                            <a href="${url}" class="download-link" download="${outputName}">⬇️ Download Resampled Audio</a>
+                        `;
+                    } catch (e2) {
+                        testResults.resample = { success: false, error: "Processing timed out" };
+                        return `<div class="error">❌ Processing timed out. The file might be too large for WASM.</div>`;
+                    }
+                }
+            } catch (error) {
+                testResults.resample = { success: false, error: error.message };
+                return `<div class="error">❌ Resampling failed: ${error.message}</div>`;
+            }
+        }
+
+        // Helper functions
+        function fileExistsInFFmpeg(filename) {
+            try {
+                ffmpeg.FS.readFile(filename);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function findFileByExtension(ext) {
+            for (let [filename] of uploadedFiles) {
+                if (filename.toLowerCase().endsWith(ext) && fileExistsInFFmpeg(filename)) {
+                    return filename;
+                }
+            }
+            return null;
+        }
+
+        function findAnyAudioFile() {
+            const extensions = ['.wav', '.mp3', '.aac', '.flac', '.ogg'];
+            for (let ext of extensions) {
+                const file = findFileByExtension(ext);
+                if (file) return file;
+            }
+            return null;
+        }
+
+        // Render the test suite interface
+        function renderTestSuite() {
+            const tests = [
+                { name: "Basic Information", func: testBasicInfo, desc: "FFmpeg version and build info" },
+                { name: "Codec List", func: testCodecList, desc: "List all available codecs" },
+                { name: "File Information", func: testFileInfo, desc: "Extract audio file metadata" },
+                { name: "WAV to MP4 Conversion", func: testWAVtoMP4, desc: "Convert WAV to MP3 format" },
+                { name: "Volume Filter", func: testVolumeFilter, desc: "Apply volume adjustment" },
+                { name: "Audio Resampling", func: testResample, desc: "Resample audio to 22.05kHz mono" }
+            ];
+
+            const container = document.getElementById('tests-container');
+            container.innerHTML = `
+                <div class="info">
+                    <h2>🧪 Testes de Processamento de Áudio</h2>
+                    <p>Faça upload de arquivos de áudio e execute os testes abaixo:</p>
+                </div>
+            `;
+
+            tests.forEach((test, index) => {
+                const testSection = document.createElement('div');
+                testSection.className = 'test-section';
+                testSection.id = `test-${index}`;
+                testSection.innerHTML = `
+                    <h3>${index + 1}. ${test.name}</h3>
+                    <p>${test.desc}</p>
+                    <button onclick="runSingleTest(${index})">Executar Teste</button>
+                    <div id="result-${index}"></div>
+                `;
+                container.appendChild(testSection);
+            });
+
+            // Add summary section
+            const summarySection = document.createElement('div');
+            summarySection.className = 'test-section';
+            summarySection.innerHTML = `
+                <h3>📊 Resumo dos Testes</h3>
+                <button onclick="runAllTests()">Executar Todos os Testes</button>
+                <button onclick="showSummary()">Mostrar Resumo</button>
+                <div id="summary"></div>
+            `;
+            container.appendChild(summarySection);
+        }
+
+        // Global functions for buttons
+        window.runSingleTest = async function(index) {
+            const testFunctions = [
+                testBasicInfo, testCodecList, testFileInfo, 
+                testWAVtoMP4, testVolumeFilter, testResample
+            ];
+            
+            const resultDiv = document.getElementById(`result-${index}`);
+            resultDiv.innerHTML = '<div class="info">🔄 Executando teste...</div>';
+            
+            try {
+                const result = await testFunctions[index]();
+                resultDiv.innerHTML = result;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Teste falhou: ${error.message}</div>`;
+            }
+        };
+
+        window.runAllTests = async function() {
+            for (let i = 0; i < 6; i++) {
+                await window.runSingleTest(i);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            window.showSummary();
+        };
+
+        window.showSummary = function() {
+            const summaryDiv = document.getElementById('summary');
+            const passed = Object.values(testResults).filter(r => r && r.success).length;
+            const total = Object.keys(testResults).length;
+            
+            summaryDiv.innerHTML = `
+                <div class="${passed === total ? 'success' : passed > 0 ? 'info' : 'error'}">
+                    📈 Testes Concluídos: ${passed}/${total}
+                </div>
+                <pre>${JSON.stringify(testResults, null, 2)}</pre>
+            `;
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initFFmpeg);
+    </script>
+</body>
+</html>

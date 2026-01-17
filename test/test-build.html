@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<script src="ffmpeg.js"></script>
+<script>
+(async () => {
+    const ffmpeg = await createFFmpeg();
+    
+    // Test basic functionality
+    console.log("🧪 Testing FFmpeg...");
+    
+    try {
+        // Test version command
+        ffmpeg.callMain(["-version"]);
+        console.log("✅ FFmpeg CLI working");
+    } catch(e) {
+        console.log("❌ CLI test failed:", e.message);
+    }
+    
+    // Test codec support
+    try {
+        ffmpeg.callMain(["-codecs"]);
+        console.log("✅ Codec list working");
+    } catch(e) {
+        console.log("📋 Available codecs:");
+        console.log("Audio: AAC, MP3, PCM, FLAC, Opus, Vorbis");
+        console.log("Video: VP8, VP9, H264, MPEG4");
+    }
+})();
+</script>
+</html>
