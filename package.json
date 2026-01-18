@@ -1,0 +1,30 @@
+{
+  "name": "ffmpeg-wasm-browser",
+  "version": "1.0.0",
+  "description": "A web-based terminal interface that simulates the FFmpeg command-line tool using WebAssembly",
+  "keywords": [
+    "ffmpeg",
+    "webassembly",
+    "html",
+    "javascript",
+    "wasm"
+  ],
+  "homepage": "https://github.com/souzamonteiro/ffmpeg-wasm-browser#readme",
+  "bugs": {
+    "url": "https://github.com/souzamonteiro/ffmpeg-wasm-browser/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/souzamonteiro/ffmpeg-wasm-browser.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Roberto Luiz Souza Monteiro",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
