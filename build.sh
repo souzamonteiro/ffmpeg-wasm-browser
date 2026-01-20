@@ -40,20 +40,14 @@ emconfigure ./configure \
     --enable-encoder=aac,flac,libmp3lame,libopus,mp3,mp4,opus,pcm_s16le,vorbis \
     --enable-decoder=h264,libvpx,libvpx-vp9,mjpeg,mpeg4,vp8,vp9 \
     --enable-encoder=h264,libvpx,libvpx-vp9,mjpeg,mpeg4,vp8,vp9 \
-    --enable-demuxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,s16le,s24le,wav,webm \
-    --enable-muxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,s16le,s24le,wav,webm \
+    --enable-demuxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,pcm_s16le,pcm_s24le,s16le,s24le,wav,webm \
+    --enable-muxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,pcm_s16le,pcm_s24le,s16le,s24le,wav,webm \
     --enable-protocol=file \
     --enable-filter=amerge,aresample,blend,colorkey,crop,dissolve,drawtext,fade,format,overlay,pan,scale,similarity,volume,yadif \
     --enable-small \
     --enable-gpl \
     --enable-nonfree \
-   --enable-libfdk-aac \
-    --enable-libmp3lame \
-    --enable-libopus \
-    --enable-libvorbis \
-    --enable-libvpx \
-    --enable-libx264 \
-     --enable-version3 \
+    --enable-version3 \
     --cc=emcc \
     --cxx=em++ \
     --ar=emar \
