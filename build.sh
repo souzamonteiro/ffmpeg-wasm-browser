@@ -36,18 +36,24 @@ emconfigure ./configure \
     --enable-swresample \
     --enable-swscale \
     --enable-avfilter \
-    --enable-decoder=aac,mp3,pcm_s16le,opus,vorbis,flac \
-    --enable-encoder=aac,libmp3lame,libopus,pcm_s16le \
-    --enable-decoder=vp8,vp9,h264,mpeg4,mjpeg \
-    --enable-encoder=libvpx,libvpx-vp9,mpeg4,mjpeg \
-    --enable-demuxer=mp3,wav,aac,flac,ogg,opus,mov,mp4,flv,matroska,webm \
-    --enable-muxer=mp3,wav,mp4,flv,matroska,webm,ogg \
+    --enable-decoder=aac,flac,libmp3lame,libopus,mp3,mp4,opus,pcm_s16le,vorbis \
+    --enable-encoder=aac,flac,libmp3lame,libopus,mp3,mp4,opus,pcm_s16le,vorbis \
+    --enable-decoder=h264,libvpx,libvpx-vp9,mjpeg,mpeg4,vp8,vp9 \
+    --enable-encoder=h264,libvpx,libvpx-vp9,mjpeg,mpeg4,vp8,vp9 \
+    --enable-demuxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,s16le,s24le,wav,webm \
+    --enable-muxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,s16le,s24le,wav,webm \
     --enable-protocol=file \
-    --enable-filter=scale,aresample,format \
+    --enable-filter=amerge,aresample,blend,colorkey,crop,dissolve,drawtext,fade,format,overlay,pan,scale,similarity,volume,yadif \
     --enable-small \
     --enable-gpl \
     --enable-nonfree \
-    --enable-version3 \
+   --enable-libfdk-aac \
+    --enable-libmp3lame \
+    --enable-libopus \
+    --enable-libvorbis \
+    --enable-libvpx \
+    --enable-libx264 \
+     --enable-version3 \
     --cc=emcc \
     --cxx=em++ \
     --ar=emar \
