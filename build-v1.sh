@@ -43,7 +43,7 @@ emconfigure ./configure \
     --enable-demuxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,pcm_s16le,pcm_s24le,s16le,s24le,wav,webm \
     --enable-muxer=aac,flac,flv,mov,mp3,mp4,ogg,opus,matroska,pcm_s16le,pcm_s24le,s16le,s24le,wav,webm \
     --enable-protocol=file \
-    --enable-filter=amerge,amix,aresample,blend,chromakey,colorkey,crop,dissolve,drawtext,fade,format,overlay,pan,scale,setpts,sidechaincompress,similarity,volume,xfade,yadif \
+    --enable-filter=amerge,aresample,blend,colorkey,crop,dissolve,drawtext,fade,format,overlay,pan,scale,similarity,volume,yadif \
     --enable-small \
     --enable-gpl \
     --enable-nonfree \
@@ -90,8 +90,6 @@ emcc \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s INITIAL_MEMORY=512MB \
     -s MAXIMUM_MEMORY=1GB \
-    -s USE_PTHREADS=0 \
-    -s PROXY_TO_PTHREAD=0 \
     -s EXPORTED_FUNCTIONS='["_main"]' \
     -s EXPORTED_RUNTIME_METHODS='["FS","callMain"]'
 
